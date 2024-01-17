@@ -1,0 +1,5 @@
+include:
+  - project: "business/devops"
+    ref: main
+    file:
+      - '/cicd/gitlab-ci/templates/projects/go-demo/demo-hello.yaml'

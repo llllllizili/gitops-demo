@@ -1,0 +1,1 @@
+go build -tags netgo -o bin/hello cmd/main.go
