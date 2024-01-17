@@ -1,0 +1,6 @@
+dependencies:
+- name: demo
+  repository: http://harbor.zili.work/chartrepo/charts
+  version: 1.0.0
+digest: sha256:92c19a88fde4cb4d4dfb780c12cb7d1a3797b67596502b4155db53b814bd84ae
+generated: "2023-12-21T13:38:25.905815+08:00"

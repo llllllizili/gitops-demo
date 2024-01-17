@@ -1,0 +1,36 @@
+stages:
+  - check-version
+  - sonar-scan
+  - test
+  - package
+  - build
+  - deploy
+
+default:
+  interruptible: true
+  timeout: 90m
+
+# gitlab ci 全局变量定义
+variables:
+  VAR_EXAMPLE: "global var"
+  GLOBAL_DEVELOP_BRANCH_NAME: demo_dev
+  GLOBAL_RELEASE_BRANCH_NAME: main
+  GLOBAL_REGISTRY_HOST: "http://harbor.zili.work"
+  GITLAB_REGISTRY_USER: "admin"
+  GITLAB_REGISTRY_PWD: "Harbor12345"
+  GLOBAL_REGISTRY_REPO_DEFAULT: demo
+  GLOBAL_PACKAGE_GO_DOCKER_VERSION: 1.20-alpine
+  GLOBAL_PACKAGE_GRADLE_DOCKER_VERSION: 6.5.1-jdk8
+  GLOBAL_PACKAGE_MAVEN_DOCKER_VERSION: 3.3.9-jdk-8
+  GLOBAL_PACKAGE_NODE_DOCKER_VERSION: 14.18.1-alpine3.14
+  GLOBAL_PACKAGE_PYTHON_DOCKER_VERSION: 3.10.13-slim
+  GLOBAL_GITLAB_HOST: "gitlab.zili.work"
+  GLOBAL_REGISTRY_REPO_DEFAULT: default
+
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      variables:
+        GLOBAL_WORKFLOW_DEPLOY_ENV: "dev"
+        GLOBAL_WORKFLOW_CD_REPO_BRANCH: "develop"

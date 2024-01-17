@@ -1,0 +1,59 @@
+.deploy:
+  tags:
+    - K8S
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none
+    PROJECT_PRODUCT_NAME: ${PROJECT_PRODUCT_NAME}
+    GITLAB_CIBOT_USERNAME: ${GITLAB_CIBOT_USERNAME}
+    GITLAB_CIBOT_PASSWORD: ${GITLAB_CIBOT_PASSWORD}
+    GITLAB_CIBOT_SSH_PRIVATE_KEY: ""
+    GITLAB_CD_REPO_PATH: "business/"
+    GITLAB_CD_REPO_NAME: "devops"
+    STAGE_CIBOT_USER_EMAIL: "ci@zili.work"
+    STAGE_CIBOT_USER_NAME: "CI/CD Robot"
+
+#   image: ${REGISTRY_HOST}/base/alpine-openssh-git-curl-jq:latest
+  before_script:
+  # http://gitlab.zili.work/business/devops.git
+    - |
+        export GIT_REPO_URL="http://${GITLAB_CIBOT_USERNAME}:${GITLAB_CIBOT_PASSWORD}@${GLOBAL_GITLAB_HOST}/${GITLAB_CD_REPO_PATH}/${GITLAB_CD_REPO_NAME}.git"
+        echo "GIT_REPO_URL: ${GIT_REPO_URL}"
+    - git config --global user.email "${STAGE_CIBOT_USER_EMAIL}"
+    - git config --global user.name "${STAGE_CIBOT_USER_NAME}"
+    - git clone -b ${CD_REPO_BRANCH} ${GIT_REPO_URL} ${GITLAB_CD_REPO_NAME}
+    - cd ./${GITLAB_CD_REPO_NAME}
+  script:
+    - |
+      if [[ -n "${PRODUCT_VERSION}" && -n "${IMAGE_TAG}" ]]; then
+        echo "PROJECT_PRODUCT_NAME: ${PROJECT_PRODUCT_NAME}"
+        echo "PRODUCT_VERSION: ${PRODUCT_VERSION}"
+        echo "SERVICE_NAME: ${SERVICE_NAME}"
+        echo "IMAGE_TAG: ${IMAGE_TAG}"
+        echo "DEPLOY_ENV: ${DEPLOY_ENV}"
+        echo "CD_REPO_BRANCH: ${CD_REPO_BRANCH}"
+      else
+        echo 'Fatal: "artifacts:reports:dotenv" variables PRODUCT_VERSION or IMAGE_TAG is null.'
+        exit 1
+      fi
+    - git checkout -B ${CD_REPO_BRANCH}
+    # - cd ${PROJECT_PRODUCT_NAME}/${SERVICE_NAME}/${DEPLOY_ENV}
+    - cd ${PROJECT_PRODUCT_NAME}/${DEPLOY_ENV}
+    - sleep $((1 + RANDOM % 30))
+    - git pull origin ${CD_REPO_BRANCH}
+    - |
+      sed -i -r "s/(^version: ).+/\1${PRODUCT_VERSION}/g; s/(^appVersion: ).+/\1${PRODUCT_VERSION}/g" ./Chart.yaml
+      sed -i -r "/repository: ${PROJECT_PRODUCT_NAME}\/${SERVICE_NAME}$/{n;s/(tag: ).*/\1${IMAGE_TAG}/}" ./values*.yaml
+      sed -n "/repository: ${PROJECT_PRODUCT_NAME}\/${SERVICE_NAME}/{N;p}" ./values.yaml
+    - |
+      if git commit -am "[skip ci] ${DEPLOY_ENV} ${PROJECT_PRODUCT_NAME}-${SERVICE_NAME} image tag update to ${IMAGE_TAG}";
+      then
+        until git push origin ${CD_REPO_BRANCH} && echo "Starting to deploy to ${DEPLOY_ENV}.";
+        do
+          git fetch origin ${CD_REPO_BRANCH}
+          git rebase origin/${CD_REPO_BRANCH}
+        done
+      else
+        echo "Nothing changes, deploy action will not be triggered."
+      fi
+

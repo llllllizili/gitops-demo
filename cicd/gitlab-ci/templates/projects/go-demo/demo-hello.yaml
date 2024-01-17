@@ -1,0 +1,59 @@
+include:
+  - project: "business/devops"
+    ref: main
+    file:
+      - '/cicd/gitlab-ci/templates/base.yaml'
+      - '/cicd/gitlab-ci/templates/rules.yaml'
+      - '/cicd/gitlab-ci/templates/jobs/check-version.yaml'
+      - '/cicd/gitlab-ci/templates/jobs/sonar-scan.yaml'
+      - '/cicd/gitlab-ci/templates/jobs/go.yaml'
+      - '/cicd/gitlab-ci/templates/jobs/build-images.yaml'
+      - '/cicd/gitlab-ci/templates/jobs/deploy.yaml'
+# Check Release Version
+# check-version:
+#   extends:
+#     - .check-version
+#   rules:
+#     - !reference ['.rules:check_version', rules]
+
+# sonar-scan
+code-sonar-sacn:
+  extends:
+    - .sonarqube-check
+  rules:
+    - !reference ['.rules:sonar_scan', rules]
+
+# package
+package-hello:
+  variables:
+    PROJECT_PRODUCT_NAME: demo
+    PROJECT_BINARY_NAME: hello
+    PROJECT_SUB_PATH: ""
+  extends:
+    - .go-package
+  rules:
+    - !reference ['.rules:demo', rules]
+
+# build image
+build-hello-image:
+  variables:
+    CHANGES_DIR: ""
+    KANIKO_BUILD_CONTEXT_SUB_PATH: ""
+    PROJECT_PRODUCT_NAME: demo
+    PROJECT_SERVICE_NAME: hello
+  needs: ['package-hello']
+  extends:
+    - .build-docker-image
+  rules:
+    - !reference ['.rules:demo', rules]
+
+# deploy 
+deploy-change-charts:
+  variables:
+    PROJECT_PRODUCT_NAME: demo
+    PROJECT_SERVICE_NAME: hello
+  needs: ['build-hello-image']
+  extends:
+    - .deploy
+  rules:
+    - !reference ['.rules:demo', rules]

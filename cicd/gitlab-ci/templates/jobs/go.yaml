@@ -1,0 +1,27 @@
+.go-package:
+  tags:
+    - K8S
+  stage: package
+  variables:
+    STAGE_VAR_GO_ARCH: "amd64 arm64"
+    STAGE_VAR_GO_PROXY: https://goproxy.cn
+#   image: ${REGISTRY_HOST}/cicd/golang:${GLOBAL_PACKAGE_GO_DOCKER_VERSION} # 镜像在私有仓库时使用
+  image: golang:${GLOBAL_PACKAGE_GO_DOCKER_VERSION}
+  before_script:
+    - |
+      go env -w GOSUMDB=off
+      go env -w GO111MODULE=on
+      go env -w GOPROXY=${STAGE_VAR_GO_PROXY},direct
+  script:
+    - go env -w GOMODCACHE=$CI_PROJECT_DIR/.go/pkg/mod
+    - go mod tidy
+    - go build -tags netgo -o ${PROJECT_BINARY_NAME} cmd/main.go
+    - file ${PROJECT_BINARY_NAME} || true
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .go/pkg/mod
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/${PROJECT_BINARY_NAME}
+

@@ -1,0 +1,56 @@
+# 抽象、复用定义
+.rules:changes:changes_common: &changes_common
+  - VERSION
+  - Dockerfile
+
+.rules:changes:changes_dir: &changes_dir
+# 此变量，项目yaml中定义，实现灵活配置
+  - $CHANGES_DIR/**/*
+
+.rules:when:never: &never
+  when: never
+
+.rules:when:manual: &manual
+  when: manual
+
+.rules:allow_failure:true: &allow_failure_true
+  allow_failure: true
+
+.rules:allow_failure:false: &allow_failure_false
+  allow_failure: false
+
+# 规则定义
+# 规则的定义其实就是在指定流水线的走向，什么条件下，触发什么样步骤
+
+## 基础规则定义
+.rules:CI_PIPELINE_SOURCE:push:
+  rules:
+    if: '$CI_PIPELINE_SOURCE == "push"'
+
+### CI步骤,rule随便定义了，具体按实际情况调整
+
+### check-version
+.rules:check_version:
+  rules:
+    if: !reference ['.rules:CI_PIPELINE_SOURCE:push', rules, if]
+    <<: *manual
+###  sonar-scan
+.rules:sonar_scan:
+  rules:
+    if: !reference ['.rules:CI_PIPELINE_SOURCE:push', rules, if]
+    <<: *manual
+    <<: *allow_failure_true
+
+### 占位， rule 通过
+.rules:demo:
+  rules:
+    if: !reference ['.rules:CI_PIPELINE_SOURCE:push', rules, if]
+
+
+### package
+
+### build
+
+
+
+

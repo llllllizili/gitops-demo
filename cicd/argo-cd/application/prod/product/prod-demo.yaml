@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prod-demo
+  namespace: argocd
+  labels:
+    app: prod-demo
+  # https://argo-cd.readthedocs.io/en/stable/user-guide/app_deletion/
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: demo
+    server: https://kubernetes.default.svc
+  project: demo
+  source:
+    # repoURL: http://root:123qweASD@gitlab.zili.work:8888/business/devops.git
+    repoURL: http://gitlab.zili.work:8888/business/devops.git
+    targetRevision: main
+    path: gitops/product/demo/prod
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

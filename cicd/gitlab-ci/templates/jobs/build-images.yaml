@@ -1,0 +1,52 @@
+.build-docker-image:
+  tags:
+    - K8S
+  stage: build
+  variables:
+    DOCKER_TLS_CERTDIR: "" # disable dind tls
+    DOCKER_HOST: tcp://docker:2375 # specify docker client connect to dind service which with docker alias
+    BUILDX_VERSION: "v0.11.2"
+    PLATFORMS: "linux/amd64,linux/arm64"
+    DOCKER_BUILDX_CONTEXT_PATH: $CI_PROJECT_DIR
+    REGISTRY_MIRROR: "https://docker.m.daocloud.io"
+    DOCKER_DAEMON_OPTIONS: "--insecure-registry ${GLOBAL_REGISTRY_HOST} --registry-mirror ${REGISTRY_MIRROR}"
+  services:
+    # - name: ${GLOBAL_REGISTRY_HOST}/cicd/docker:dind # need privileged mode
+    - name: docker:dind # need privileged mode
+      entrypoint: [ "sh", "-c", "dockerd-entrypoint.sh $DOCKER_DAEMON_OPTIONS" ]
+      alias: "docker"
+  image: docker:latest
+  # image: ${GLOBAL_REGISTRY_HOST}/cicd/docker:latest # need docker version > 19.03
+  before_script:
+    # Login to registry
+    - |
+      export VERSION=$(cat $CI_PROJECT_DIR/VERSION)
+      echo "VERSION: ${VERSION}"
+      export TAG="$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-${VERSION}"
+      echo "TAG: ${TAG}"
+    
+    - |
+      echo "${GITLAB_REGISTRY_PWD}" | docker login "${GLOBAL_REGISTRY_HOST}" --username "${GITLAB_REGISTRY_USER}" --password-stdin
+
+  script:
+    - echo "The current commited branch is $CI_COMMIT_REF_NAME"
+    
+    - |
+      echo "PRODUCT_VERSION=${VERSION}" > ${PROJECT_SERVICE_NAME}-deploy.env
+      echo "IMAGE_TAG=${TAG}" >> ${PROJECT_SERVICE_NAME}-deploy.env
+      cat ${PROJECT_SERVICE_NAME}-deploy.env
+
+    - DOCKERFILE_PATH=${DOCKERFILE_PATH:-"${DOCKER_BUILDX_CONTEXT_PATH}/Dockerfile"}
+    
+    - |
+      docker build \
+        --file ${DOCKERFILE_PATH} \
+        --tag ${GLOBAL_REGISTRY_HOST}/${REGISTRY_REPO}/${PROJECT_SERVICE_NAME}:${TAG_LATEST} \
+        --tag ${GLOBAL_REGISTRY_HOST}/${GLOBAL_REGISTRY_REPO_DEFAULT}/${PROJECT_PRODUCT_NAME}-${PROJECT_SERVICE_NAME}:${TAG_LATEST} \
+        --push \
+        ${DOCKER_BUILDX_CONTEXT_PATH}
+  artifacts:
+    when: on_success
+    expire_in: 2 days
+    reports:
+      dotenv: ${PROJECT_SERVICE_NAME}-deploy.env

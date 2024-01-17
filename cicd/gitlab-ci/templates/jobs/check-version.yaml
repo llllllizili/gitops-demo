@@ -1,0 +1,21 @@
+variables:
+  RELEASE_VERSION:
+    description: "Enter the required release version"
+
+.check-version:
+  tags:
+    - K8S
+  stage: check-version
+  before_script:
+    - |
+      if [[ -z "${RELEASE_VERSION-}" ]]; then
+        echo "RELEASE_VERSION is not set."
+        exit 1
+      else
+        echo "RELEASE_VERSION: ${RELEASE_VERSION}"
+      fi
+  script:
+    - echo "check version"
+
+      
+
